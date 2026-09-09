@@ -228,6 +228,7 @@
         try {
             const res = await fetch(url);
             const data = await res.json();
+            // Handle different response structures
             const list = data.data || data.result || [];
             
             grid.innerHTML = '';
@@ -283,6 +284,7 @@
         `;
     }
 
+    // --- FIXED PLAYER STREAM LOGIC ---
     async function loadEpisode(id, ep) {
         const video = document.getElementById('main-video');
         video.pause();
@@ -291,16 +293,37 @@
         try {
             const res = await fetch(`https://api.saipulanuar.eu.org/api/drama/episode?source=${currentSource}&id=${id}&ep=${ep}`);
             const data = await res.json();
-            const streamUrl = data.data?.videoUrl || data.result?.url || data.url;
+            
+            console.log("API Response:", data); // Debugging
+
+            // SMART DETECT STREAM URL
+            let streamUrl = null;
+            
+            // Check common paths
+            if (data.data && data.data.videoUrl) streamUrl = data.data.videoUrl;
+            else if (data.data && data.data.url) streamUrl = data.data.url;
+            else if (data.result && data.result.url) streamUrl = data.result.url;
+            else if (data.result && data.result.videoUrl) streamUrl = data.result.videoUrl;
+            else if (data.url) streamUrl = data.url;
+            else if (data.stream) streamUrl = data.stream;
+            
+            // If still not found, try to find any string that looks like a URL in the object
+            if (!streamUrl) {
+                const jsonString = JSON.stringify(data);
+                const urlMatch = jsonString.match(/https?:\/\/[^\s"']+\.mp4[^\s"']*/);
+                if (urlMatch) streamUrl = urlMatch[0];
+            }
 
             if (streamUrl) {
                 video.src = streamUrl;
                 video.play().catch(e => console.log("Autoplay blocked"));
             } else {
-                alert("Stream URL not found for this episode.");
+                alert("Stream URL not found for this episode. API structure might have changed.");
+                console.error("Could not find stream URL in:", data);
             }
         } catch (e) {
             alert("Failed to load episode stream.");
+            console.error(e);
         }
     }
 
@@ -365,4 +388,4 @@
     loadDrama();
 </script>
 </body>
-</html>
+                </html>
