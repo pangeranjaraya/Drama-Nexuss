@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CAA X DORAMA</title>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<style>
+    :root {
+        --bg: #E5E5E5; --card: #FFFFFF; --black: #000000; 
+        --accent: #CCFF00; --cyan: #00FFFF; --border: 3px solid #000;
+        --shadow: 6px 6px 0px #000; --font: 'Courier New', Courier, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); }
+    body { background: var(--bg); color: var(--black); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* BRUTALIST COMPONENTS */
+    .b-box { background: var(--card); border: var(--border); box-shadow: var(--shadow); transition: 0.2s; }
+    .b-box:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px #000; }
+    .b-btn { 
+        background: var(--black); color: #fff; border: var(--border); 
+        padding: 12px 20px; font-weight: 900; text-transform: uppercase; 
+        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+        box-shadow: 4px 4px 0px var(--accent); transition: 0.1s;
+    }
+    .b-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--accent); }
+    .b-btn.accent { background: var(--accent); color: var(--black); box-shadow: 4px 4px 0px #000; }
+    .b-input { 
+        width: 100%; padding: 12px; background: #f0f0f0; border: var(--border); 
+        font-weight: bold; outline: none; 
+    }
+    .b-input:focus { background: #fff; border-color: var(--accent); }
+
+    /* HEADER */
+    header { 
+        background: var(--black); color: #fff; padding: 15px; 
+        display: flex; justify-content: space-between; align-items: center; 
+        border-bottom: 4px solid var(--accent); z-index: 50;
+    }
+    .logo { font-size: 20px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; }
+    
+    /* LAYOUT */
+    main { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
+    .page { display: none; animation: slideUp 0.3s ease; }
+    .page.active { display: block; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* GRID & CARDS */
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .drama-card { cursor: pointer; overflow: hidden; position: relative; }
+    .drama-card img { width: 100%; height: 180px; object-fit: cover; border-bottom: var(--border); }
+    .drama-info { padding: 10px; }
+    .drama-title { font-size: 12px; font-weight: 900; line-height: 1.3; text-transform: uppercase; }
+    .tag { display: inline-block; background: var(--black); color: #fff; padding: 2px 6px; font-size: 9px; margin-top: 5px; }
+
+    /* PLAYER OVERLAY */
+    #player-view { 
+        position: fixed; inset: 0; background: var(--bg); z-index: 100; 
+        display: none; flex-direction: column; 
+    }
+    #player-view.active { display: flex; }
+    .video-wrapper { width: 100%; aspect-ratio: 16/9; background: #000; border-bottom: var(--border); }
+    video { width: 100%; height: 100%; object-fit: contain; }
+    .player-meta { padding: 20px; flex: 1; overflow-y: auto; }
+    .quote-box { 
+        background: var(--accent); border: var(--border); padding: 15px; 
+        margin-bottom: 20px; font-style: italic; font-weight: bold; 
+        box-shadow: var(--shadow);
+    }
+
+    /* BOTTOM NAV */
+    nav { 
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        background: var(--black); border-top: 4px solid var(--accent); 
+        display: flex; z-index: 90;
+    }
+    .nav-item { 
+        flex: 1; padding: 15px 0; text-align: center; color: #666; 
+        cursor: pointer; transition: 0.2s; 
+    }
+    .nav-item.active { color: var(--accent); background: #111; }
+    .nav-item i { font-size: 24px; display: block; margin-bottom: 4px; }
+    .nav-item span { font-size: 10px; font-weight: 900; text-transform: uppercase; }
+
+    /* TOOLS POPUP */
+    #tools-popup { 
+        position: fixed; inset: 0; background: var(--bg); z-index: 200; 
+        display: none; flex-direction: column; 
+    }
+    #tools-popup.active { display: flex; }
+    .tool-header { background: var(--accent); padding: 20px; border-bottom: var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .tool-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .result-box { margin-top: 20px; padding: 15px; background: #000; color: var(--accent); border: var(--border); word-break: break-all; }
+    .result-box img, .result-box video { max-width: 100%; border: 2px solid #fff; margin-bottom: 10px; }
+
+    @media (max-width: 480px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="logo"><i class="ph-fill ph-film-strip"></i> CAA X DORAMA</div>
+    <div id="clock" style="font-weight:bold; color:var(--accent)">00:00</div>
+</header>
+
+<main>
+    <!-- HOME / DRAMA PAGE -->
+    <div id="page-home" class="page active">
+        <div class="b-box" style="padding: 20px; margin-bottom: 20px; background: var(--accent);">
+            <h1 style="font-size: 24px; text-transform: uppercase; margin-bottom: 10px;">Streaming Drama Gratis</h1>
+            <p style="font-size: 12px; font-weight: bold;">StarShort • StardustTV • DramaBox</p>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <select id="source-select" class="b-input" style="flex:1;">
+                <option value="starshort">STARSHORT</option>
+                <option value="stardusttv">STARDUSTTV</option>
+                <option value="dramabox">DRAMABOX</option>
+            </select>
+            <button class="b-btn" onclick="loadDrama()"><i class="ph-bold ph-arrows-clockwise"></i></button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <input type="text" id="search-input" class="b-input" placeholder="Cari judul drama...">
+            <button class="b-btn accent" onclick="searchDrama()"><i class="ph-bold ph-magnifying-glass"></i></button>
+        </div>
+
+        <div id="drama-grid" class="grid">
+            <div class="b-box" style="grid-column: span 2; padding: 20px; text-align: center;">
+                Klik Refresh untuk memuat drama
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- PLAYER VIEW -->
+<div id="player-view">
+    <div style="padding: 10px; display: flex; justify-content: space-between; align-items: center; background: #000; color: #fff;">
+        <span style="font-weight: bold; font-size: 12px;">NOW PLAYING</span>
+        <button onclick="closePlayer()" style="background:none; border:none; color:#fff; font-size: 24px;"><i class="ph-bold ph-x"></i></button>
+    </div>
+    <div class="video-wrapper">
+        <video id="main-video" controls playsinline></video>
+    </div>
+    <div class="player-meta">
+        <div class="quote-box">
+            "Hidup adalah sebuah drama, dan kita adalah aktor utamanya."
+        </div>
+        <h2 id="p-title" style="font-size: 18px; text-transform: uppercase; margin-bottom: 10px;">Judul Drama</h2>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="b-btn" style="flex:1;" onclick="changeEp(-1)"><i class="ph-bold ph-caret-left"></i> PREV</button>
+            <div id="ep-indicator" class="b-box" style="flex:1; display:flex; align-items:center; justify-content:center; font-weight:900;">EP 1</div>
+            <button class="b-btn" style="flex:1;" onclick="changeEp(1)">NEXT <i class="ph-bold ph-caret-right"></i></button>
+        </div>
+        <h3 style="margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">UP NEXT</h3>
+        <div id="up-next-list"></div>
+    </div>
+</div>
+
+<!-- TOOLS POPUP (TIKTOK ONLY) -->
+<div id="tools-popup">
+    <div class="tool-header">
+        <h2 style="font-weight: 900; text-transform: uppercase;"><i class="ph-fill ph-wrench"></i> TOOLS</h2>
+        <button onclick="toggleTools(false)" class="b-btn" style="padding: 5px 15px; background: #000; color: #fff; box-shadow: none;">X</button>
+    </div>
+    <div class="tool-content">
+        <div class="b-box" style="padding: 20px;">
+            <h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                <i class="ph-fill ph-tiktok-logo" style="font-size: 24px;"></i> TIKTOK DOWNLOADER
+            </h3>
+            <p style="font-size: 11px; margin-bottom: 15px; color: #555;">Download video TikTok tanpa watermark langsung dari browser.</p>
+            
+            <input type="url" id="tt-url" class="b-input" placeholder="Paste link TikTok di sini...">
+            <button class="b-btn accent" style="width: 100%; margin-top: 15px;" onclick="downloadTikTok()">
+                <i class="ph-bold ph-download-simple"></i> DOWNLOAD VIDEO
+            </button>
+
+            <div id="tt-result" class="result-box" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav>
+    <div class="nav-item active" onclick="switchPage('home')">
+        <i class="ph-fill ph-house"></i><span>Home</span>
+    </div>
+    <div class="nav-item" onclick="toggleTools(true)">
+        <i class="ph-fill ph-wrench"></i><span>Tools</span>
+    </div>
+    <div class="nav-item" onclick="window.open('https://t.me/CaaCyberr404')">
+        <i class="ph-fill ph-telegram-logo"></i><span>Dev</span>
+    </div>
+</nav>
+
+<script>
+    // CLOCK
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+    }, 1000);
+
+    // NAVIGATION
+    function switchPage(page) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + page).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    }
+
+    function toggleTools(show) {
+        document.getElementById('tools-popup').classList.toggle('active', show);
+    }
+
+    // DRAMA LOGIC
+    let currentSource = 'starshort';
+    let currentDramaId = '';
+    let currentEp = 1;
+
+    async function loadDrama(query = '') {
+        currentSource = document.getElementById('source-select').value;
+        const grid = document.getElementById('drama-grid');
+        grid.innerHTML = '<div class="b-box" style="grid-column: span 2; padding: 20px; text-align: center;">LOADING DATA...</div>';
+
+        let url = `https://api.saipulanuar.eu.org/api/drama/trending?source=${currentSource}`;
+        if (query) url = `https://api.saipulanuar.eu.org/api/drama/search?source=${currentSource}&q=${encodeURIComponent(query)}`;
+
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const list = data.data || data.result || [];
+            
+            grid.innerHTML = '';
+            if (list.length === 0) {
+                grid.innerHTML = '<div class="b-box" style="grid-column: span 2; padding: 20px; text-align: center;">NO DATA FOUND</div>';
+                return;
+            }
+
+            list.forEach(d => {
+                const title = d.title || d.name || 'Unknown';
+                const thumb = d.thumbnail || d.cover || 'https://via.placeholder.com/300x400?text=NO+IMAGE';
+                const id = d.id;
+
+                grid.innerHTML += `
+                    <div class="b-box drama-card" onclick="openPlayer('${id}', '${title.replace(/'/g, "\\'")}')">
+                        <img src="${thumb}" loading="lazy">
+                        <div class="drama-info">
+                            <div class="drama-title">${title}</div>
+                            <span class="tag">${currentSource.toUpperCase()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            grid.innerHTML = '<div class="b-box" style="grid-column: span 2; padding: 20px; text-align: center; color: red;">API ERROR. TRY AGAIN.</div>';
+        }
+    }
+
+    function searchDrama() {
+        const q = document.getElementById('search-input').value;
+        if (q) loadDrama(q);
+    }
+
+    async function openPlayer(id, title) {
+        currentDramaId = id;
+        currentEp = 1;
+        document.getElementById('player-view').classList.add('active');
+        document.getElementById('p-title').innerText = title;
+        document.getElementById('ep-indicator').innerText = 'EPISODE 1';
+        
+        // Load Episode
+        await loadEpisode(id, 1);
+
+        // Mock Up Next
+        document.getElementById('up-next-list').innerHTML = `
+            <div class="b-box" style="padding: 10px; display: flex; gap: 10px; align-items: center; cursor: pointer;" onclick="changeEp(1)">
+                <div style="width: 60px; height: 40px; background: #000; flex-shrink: 0;"></div>
+                <div>
+                    <div style="font-size: 11px; font-weight: bold;">NEXT EPISODE</div>
+                    <div style="font-size: 9px; color: #666;">Continue watching</div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function loadEpisode(id, ep) {
+        const video = document.getElementById('main-video');
+        video.pause();
+        video.src = '';
+        
+        try {
+            const res = await fetch(`https://api.saipulanuar.eu.org/api/drama/episode?source=${currentSource}&id=${id}&ep=${ep}`);
+            const data = await res.json();
+            const streamUrl = data.data?.videoUrl || data.result?.url || data.url;
+
+            if (streamUrl) {
+                video.src = streamUrl;
+                video.play().catch(e => console.log("Autoplay blocked"));
+            } else {
+                alert("Stream URL not found for this episode.");
+            }
+        } catch (e) {
+            alert("Failed to load episode stream.");
+        }
+    }
+
+    function changeEp(dir) {
+        currentEp += dir;
+        if (currentEp < 1) currentEp = 1;
+        document.getElementById('ep-indicator').innerText = `EPISODE ${currentEp}`;
+        loadEpisode(currentDramaId, currentEp);
+    }
+
+    function closePlayer() {
+        document.getElementById('player-view').classList.remove('active');
+        document.getElementById('main-video').pause();
+    }
+
+    // TIKTOK DOWNLOADER LOGIC (DIRECT DOWNLOAD)
+    async function downloadTikTok() {
+        const url = document.getElementById('tt-url').value;
+        const resultBox = document.getElementById('tt-result');
+        
+        if (!url || !url.includes('tiktok.com')) {
+            alert("Invalid TikTok URL!");
+            return;
+        }
+
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<div style="text-align:center;"><i class="ph-bold ph-spinner animate-spin" style="font-size:24px;"></i> PROCESSING...</div>';
+
+        try {
+            // Menggunakan API publik yang support CORS dan direct link
+            const apiUrl = `https://api.siputzx.my.id/api/d/tiktok/v2?url=${encodeURIComponent(url)}`;
+            const res = await fetch(apiUrl);
+            const data = await res.json();
+
+            const videoUrl = data.data?.video || data.result?.video || data.video;
+            const author = data.data?.author?.nickname || 'Unknown User';
+            const caption = data.data?.title || 'No Caption';
+
+            if (videoUrl) {
+                resultBox.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <strong>@${author}</strong><br>
+                        <span style="font-size: 10px; color: #aaa;">${caption.substring(0, 50)}...</span>
+                    </div>
+                    <video src="${videoUrl}" controls style="width:100%; margin-bottom: 10px;"></video>
+                    <a href="${videoUrl}" target="_blank" download class="b-btn accent" style="width:100%; text-decoration:none;">
+                        <i class="ph-bold ph-download-simple"></i> SAVE VIDEO
+                    </a>
+                    <p style="font-size: 9px; margin-top: 10px; text-align: center; color: #666;">
+                        *Jika download tidak otomatis, klik kanan pada video > Save Video As
+                    </p>
+                `;
+            } else {
+                resultBox.innerHTML = '<div style="color:red;">FAILED TO FETCH VIDEO. TRY AGAIN.</div>';
+            }
+        } catch (e) {
+            resultBox.innerHTML = '<div style="color:red;">ERROR: ' + e.message + '</div>';
+        }
+    }
+
+    // Initial Load
+    loadDrama();
+</script>
+</body>
+</html>
